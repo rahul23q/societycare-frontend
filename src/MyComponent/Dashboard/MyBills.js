@@ -30,16 +30,34 @@ export default function MyBills() {
   };
 
   // ✅ Pay Now function
-  const payNow = async (bill_id) => {
-    try {
-      await api.post("/payments/pay", { bill_id });
+  const payNow = async (bill_id, amount) => {
+  const res = await api.post("/payments/create-order", { bill_id });
+
+  const options = {
+    key: res.data.razorpay_key,
+    amount: res.data.amount,
+    currency: "INR",
+    name: "SocietyCare",
+    description: "Maintenance Payment",
+    order_id: res.data.order_id,
+    handler: async function (response) {
+      await api.post("/payments/verify", {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+        bill_id,
+        amount
+      });
+
       alert("Payment successful ✅");
-      loadBills(); // refresh after payment
-    } catch (err) {
-      console.error("Payment failed:", err);
-      alert("Payment failed ❌");
-    }
+      loadBills();
+    },
+    theme: { color: "#2a9d8f" }
   };
+
+  const razorpay = new window.Razorpay(options);
+  razorpay.open();
+};
   // ✅ Download Receipt function
   const downloadReceipt = async (bill_id) => {
     try {
